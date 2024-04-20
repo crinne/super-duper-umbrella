@@ -33,15 +33,19 @@ export class LightingService {
         socket.write(request);
       });
 
-      socket.on('data', (data: Buffer) => {
-        const response = JSON.parse(data.toString());
+      let receivedData = Buffer.alloc(0);
 
-        if (response.error) {
-          reject(new Error(response.error.message));
-        } else {
-          resolve(response.result);
-        }
-        socket.end();
+      socket.on('data', (data: Buffer) => {
+        receivedData = Buffer.concat([receivedData, data]);
+        try {
+          const response = JSON.parse(receivedData.toString());
+          if (response.error) {
+            reject(new Error(response.error.message));
+          } else {
+            resolve(response.result);
+          }
+          socket.end();
+        } catch (error) {}
       });
 
       socket.on('error', (error) => {

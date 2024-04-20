@@ -1,32 +1,74 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModal } from "../../contexts/modal-context";
 import CreateInvoiceModal from "../../modals/CreateInvoice";
 import InvoiceList from "./InvoiceList";
-
+import { useWebsocket } from "../../contexts/websocket-context";
+import { Invoice } from "./types";
 
 export const InvoicePage = () => {
-  const [invoices, setInvoices] = useState([])
+  const [prevInvoices, setPrevInvoices] = useState<Invoice[]>([]);
+  const invoicesArrayRef = useRef<Invoice[]>([]);
   const { openModal } = useModal();
+  const socket = useWebsocket();
 
   const handleLoginClick = () => {
     openModal(<CreateInvoiceModal />);
   };
+  useEffect(() => {
+    invoicesArrayRef.current = prevInvoices; 
+  }, [prevInvoices]);
+
+  const fetchInvoices = async () => {
+    try {
+      const response = await fetch("http://localhost:4000/api/invoice");
+      if (!response.ok) {
+        throw new Error("Failed to fetch invoices");
+      }
+      const data = await response.json();
+      setPrevInvoices(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const response = await fetch("http://localhost:4000/api/invoice"); // Replace "/api/invoices" with your actual API endpoint
-        if (!response.ok) {
-          throw new Error("Failed to fetch invoices");
-        }
-        const data = await response.json();
-        setInvoices(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
     fetchInvoices();
+
+    socket.on("connect", () => {
+      console.log("Connected!");
+    });
+
+    socket.on("invoices", (updatedInvoices: Invoice[]) => {
+      const existingInvoices: Invoice[] = [];
+      const newInvoices: Invoice[] = [];
+
+      updatedInvoices.forEach((updatedInvoice) => {
+        if (
+          invoicesArrayRef.current.find(
+            (invoice) => invoice.label === updatedInvoice.label
+          )
+        ) {
+          existingInvoices.push(updatedInvoice);
+        } else {
+          newInvoices.push(updatedInvoice);
+        }
+      });
+
+      const updatedExistingInvoices = invoicesArrayRef.current.map(
+        (prevInvoice) =>
+          existingInvoices.find(
+            (updatedInvoice) => updatedInvoice.label === prevInvoice.label
+          ) || prevInvoice
+      );
+
+      const updatedInvoicesArray = [...newInvoices, ...updatedExistingInvoices];
+      setPrevInvoices(updatedInvoicesArray);
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("onMessage");
+    };
   }, []);
 
   return (
@@ -81,7 +123,7 @@ export const InvoicePage = () => {
         </div>
       </div>
 
-      <InvoiceList invoices={invoices} />
+      <InvoiceList invoices={prevInvoices} />
     </div>
   );
 };

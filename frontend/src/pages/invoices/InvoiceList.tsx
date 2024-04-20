@@ -1,28 +1,9 @@
-import { format } from "date-fns";
 import React from "react";
-
-export enum PaymentStatus {
-  expired = "expired",
-  unpaid = "unpaid",
-  paid = "paid",
-}
-
-export interface InvoiceResponse {
-  label: string;
-  bolt11: string;
-  payment_hash: string;
-  amount_msat: number;
-  status: PaymentStatus;
-  description: string;
-  expires_at: number;
-  created_index: number;
-  updated_index: number;
-}
+import { Invoice } from "./types";
 
 function capitalizeFirst(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
-
 interface StatusLabelProps {
   status: "paid" | "unpaid" | "expired";
 }
@@ -50,49 +31,74 @@ const StatusLabel: React.FC<StatusLabelProps> = ({ status }) => {
   );
 };
 
-interface ExpiresLabelProps {
-  expiresAt: number;
+// interface ExpiresLabelProps {
+//   expiresAt: number;
+// }
+// const ExpiresLabel: React.FC<ExpiresLabelProps> = ({ expiresAt }) => {
+//   const expiresAtUnixTimeMs = expiresAt * 1000;
+//   const formattedExpiresDate = format(
+//     new Date(expiresAtUnixTimeMs),
+//     "d MMMM y"
+//   );
+//   const formattedExpiresTime = format(
+//     new Date(expiresAtUnixTimeMs),
+//     "HH:MM:SS"
+//   );
+//   return (
+//     <div className="rounded-md flex flex-col font-light py-1 px-3">
+//       <div>{formattedExpiresDate}</div>
+//       <div className="text-sm text-neutral-400">at {formattedExpiresTime}</div>
+//     </div>
+//   );
+// };
+
+interface Description {
+  description: string;
 }
-const ExpiresLabel: React.FC<ExpiresLabelProps> = ({ expiresAt }) => {
-  const expiresAtUnixTimeMs = expiresAt * 1000;
-  const formattedExpiresDate = format(
-    new Date(expiresAtUnixTimeMs),
-    "d MMMM y"
-  );
-  const formattedExpiresTime = format(
-    new Date(expiresAtUnixTimeMs),
-    "HH:MM:SS"
-  );
+const DescriptionLabel: React.FC<Description> = ({ description }) => {
   return (
     <div className="rounded-md flex flex-col font-light py-1 px-3">
-      <div>{formattedExpiresDate}</div>
-      <div className="text-sm text-neutral-400">at {formattedExpiresTime}</div>
+      {description}
     </div>
   );
 };
 
 interface InvoicesListProps {
-  invoices: InvoiceResponse[];
+  invoices: Invoice[];
 }
 
 const InvoiceList: React.FC<InvoicesListProps> = ({ invoices }) => {
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        console.log("Text copied to clipboard:", text);
+      })
+      .catch((error) => {
+        console.error("Failed to copy text to clipboard:", error);
+      });
+  };
+
   return (
     <div className="container mx-auto">
       <div className="overflow-x-auto">
         <div className="flex flex-col">
           <div className="flex flex-row font-light text-slate-600">
             <div className="flex-1  py-2">LABEL</div>
-            <div className="flex-1  py-2">EXPIRES</div>
+            <div className="flex-1  py-2">DESCRIPTION</div>
+            {/* <div className="flex-1  py-2">EXPIRES</div> */}
             <div className="flex-1  py-2">AMOUNT</div>
             <div className="flex-1  py-2">STATUS</div>
+            <div className="flex-1  py-2">BOLT11</div>
             <div className="flex-1  py-2">ACTION</div>
           </div>
-          
+
           {invoices.map((invoice, index) => (
             <div className="flex   border-b flex-row items-center" key={index}>
               <div className="flex-1  py-2">{invoice.label}</div>
               <div className="flex-1  py-2">
-                <ExpiresLabel expiresAt={invoice.expires_at} />
+                {/* <ExpiresLabel expiresAt={invoice..expires_at} /> */}
+                <DescriptionLabel description={invoice.description} />
               </div>
               <div className="flex-1   py-2">
                 <div className="flex items-center gap-1">
@@ -115,6 +121,14 @@ const InvoiceList: React.FC<InvoicesListProps> = ({ invoices }) => {
               </div>
               <div className="flex-1 py-2">
                 <StatusLabel status={invoice.status} />
+              </div>
+              <div className="flex-1 py-2">
+                <p
+                  className="truncate max-w-16 cursor-pointer"
+                  onClick={() => handleCopyToClipboard(invoice.bolt11)}
+                >
+                  {invoice.bolt11}
+                </p>
               </div>
               <div className="flex-1 py-2">
                 <button className=" hover:bg-neutral-100 py-2 px-3 rounded">

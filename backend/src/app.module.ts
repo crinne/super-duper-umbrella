@@ -6,6 +6,8 @@ import { apiRoutes } from './api/api.routes';
 import { ConfigModule } from '@nestjs/config';
 
 import configuration from './config/config';
+import { GatewayModule } from './gateway/gateway.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -13,7 +15,9 @@ import configuration from './config/config';
       isGlobal: true,
       load: [...configuration],
     }),
+    ScheduleModule.forRoot(),
     LightingModule,
+    GatewayModule,
     ApiModule,
     RouterModule.register([
       {
